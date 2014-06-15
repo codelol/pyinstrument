@@ -102,7 +102,7 @@ class Profiler(object):
             frame.f_code.co_name, frame.f_code.co_filename, frame.f_code.co_firstlineno
         )
 
-    def root_frame(self):
+    def root_frame(self, callerBased):
         """
         Returns the parsed results in the form of a tree of Frame objects
         """
@@ -124,15 +124,18 @@ class Profiler(object):
                 return parent.children_dict[frame_name]
 
             for stack, self_time in self.stack_self_time.items():
-                frame_for_stack(stack).self_time = self_time
+                if callerBased:
+                    frame_for_stack(stack).self_time = self_time
+                else:
+                    frame_for_stack(stack[::-1]).self_time = self_time
 
         return self._root_frame
 
-    def first_interesting_frame(self):
+    def first_interesting_frame(self, callerBased):
         """
         Traverse down the frame hierarchy until a frame is found with more than one child
         """
-        frame = self.root_frame()
+        frame = self.root_frame(callerBased)
 
         while len(frame.children) <= 1:
             if frame.children:
@@ -143,14 +146,14 @@ class Profiler(object):
 
         return frame
 
-    def starting_frame(self, root=False):
+    def starting_frame(self, callerBased, root=False):
         if root:
-            return self.root_frame()
+            return self.root_frame(callerBased)
         else:
-            return self.first_interesting_frame()
+            return self.first_interesting_frame(callerBased)
 
-    def output_text(self, root=False, unicode=False, color=False):
-        return self.starting_frame(root=root).as_text(unicode=unicode, color=color)
+    def output_text(self, root=False, unicode=False, color=False, callerBased=True):
+        return self.starting_frame(root=root, callerBased=callerBased).as_text(unicode=unicode, color=color)
 
     def output_html(self, root=False):
         resources_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resources/')
